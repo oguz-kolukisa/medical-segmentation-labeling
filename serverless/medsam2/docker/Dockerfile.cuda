@@ -1,0 +1,34 @@
+# Pre-built base image for the MedSAM2 CUDA Nuclio function.
+# Building this image up-front (with visible docker-build progress) keeps
+# nuclio's own build step fast — nuctl just wraps the handler on top.
+#
+# Using the official PyTorch CUDA image means torch, torchvision, python, and
+# CUDA are already present. We skip apt-get entirely by pulling MedSAM2 from a
+# source tarball (no git CLI needed) and using opencv-python-headless (no
+# libgl1 needed) — Ubuntu's mirror was throttling apt downloads to kilobytes/s.
+FROM pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime
+
+ENV PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# MedSAM2 from tarball (avoids apt git). Pinned to a branch snapshot — for
+# a deterministic build, switch to a tagged release or commit SHA.
+RUN pip install https://github.com/bowang-lab/MedSAM2/archive/refs/heads/main.tar.gz
+
+# Handler runtime deps. opencv-python-headless has no libGL dependency.
+RUN pip install \
+        numpy==1.26.3 \
+        pillow==10.4.0 \
+        pycocotools==2.0.7 \
+        opencv-python-headless==4.10.0.84
+
+# The pip install of sam2 from the MedSAM2 tarball does not include the
+# hydra yaml configs (they're missing from setup.py's package_data). Fetch
+# the same tarball and overlay configs/ into the installed package.
+RUN set -eux; \
+    python -c "import urllib.request as u; u.urlretrieve('https://github.com/bowang-lab/MedSAM2/archive/refs/heads/main.tar.gz', '/tmp/m.tgz')" && \
+    python -c "import tarfile; tarfile.open('/tmp/m.tgz').extractall('/tmp')" && \
+    SAM2_DIR="$(python -c 'import sam2, os; print(os.path.dirname(sam2.__file__))')" && \
+    cp -r /tmp/MedSAM2-main/sam2/configs "$SAM2_DIR/" && \
+    rm -rf /tmp/MedSAM2-main /tmp/m.tgz

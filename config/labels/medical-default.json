@@ -1,0 +1,9 @@
+{
+  "name": "kuzey-medical-default",
+  "labels": [
+    {"name": "lesion",     "color": "#ff3b30", "type": "mask", "attributes": []},
+    {"name": "polyp",      "color": "#34c759", "type": "mask", "attributes": []},
+    {"name": "instrument", "color": "#007aff", "type": "mask", "attributes": []},
+    {"name": "anatomy",    "color": "#ffcc00", "type": "mask", "attributes": []}
+  ]
+}

@@ -1,0 +1,33 @@
+# Pre-built base image for the MedSAM2 CPU Nuclio function.
+# Same apt-free strategy as the CUDA variant: pull MedSAM2 from a source
+# tarball, use opencv-python-headless, skip git/ffmpeg/libgl1 at the system
+# level. Keeps the image small and the build independent of Ubuntu mirrors.
+FROM python:3.11-slim
+
+ENV PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# CPU-only torch wheel (~200 MB).
+RUN pip install torch==2.5.1 torchvision==0.20.1 \
+        --index-url https://download.pytorch.org/whl/cpu
+
+# MedSAM2 from tarball (no git CLI required).
+RUN pip install https://github.com/bowang-lab/MedSAM2/archive/refs/heads/main.tar.gz
+
+# Handler runtime deps. opencv-python-headless has no libGL dependency.
+RUN pip install \
+        numpy==1.26.3 \
+        pillow==10.4.0 \
+        pycocotools==2.0.7 \
+        opencv-python-headless==4.10.0.84
+
+# The pip install of sam2 from the MedSAM2 tarball does not include the
+# hydra yaml configs (they're missing from setup.py's package_data). Fetch
+# the same tarball and overlay configs/ into the installed package.
+RUN set -eux; \
+    python -c "import urllib.request as u; u.urlretrieve('https://github.com/bowang-lab/MedSAM2/archive/refs/heads/main.tar.gz', '/tmp/m.tgz')" && \
+    python -c "import tarfile; tarfile.open('/tmp/m.tgz').extractall('/tmp')" && \
+    SAM2_DIR="$(python -c 'import sam2, os; print(os.path.dirname(sam2.__file__))')" && \
+    cp -r /tmp/MedSAM2-main/sam2/configs "$SAM2_DIR/" && \
+    rm -rf /tmp/MedSAM2-main /tmp/m.tgz

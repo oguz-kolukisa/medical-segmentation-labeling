@@ -1,0 +1,7 @@
+torch==2.5.1
+torchvision==0.20.1
+numpy==1.26.3
+pillow==10.4.0
+pycocotools==2.0.7
+# MedSAM2 is installed from source in the Dockerfile build step; keep pure
+# python deps here so the Nuclio build can cache them.

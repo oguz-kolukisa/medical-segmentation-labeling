@@ -1,0 +1,64 @@
+metadata:
+  name: kuzey-medsam2-interactor-cpu
+  namespace: cvat
+  annotations:
+    name: MedSAM2 (interactor, CPU)
+    # CVAT v2.20+ requires `version: 2` on interactor annotations. The older
+    # `type: "mask"` spec JSON was for the v1 contract; v2 takes no spec body
+    # and expects the handler to return `{"mask": [...]}` directly.
+    version: 2
+    type: interactor
+    spec:
+    min_pos_points: 1
+    min_neg_points: 0
+    startswith_box_optional: true
+    help_message: Click once inside a structure to get a MedSAM2 mask. Right-click for negative points.
+
+spec:
+  description: MedSAM2 single-frame segmentation for medical video (CPU).
+  runtime: "python:3.11"
+  handler: main:handler
+  eventTimeout: 60s
+
+  build:
+    image: cvat.kuzey.medsam2.cpu:latest
+    # Pre-built locally from serverless/medsam2/docker/Dockerfile.cpu — already
+    # contains python 3.11, torch CPU, MedSAM2, and all handler deps. Nuclio
+    # only wraps its processor on top, so this build is fast and silent
+    # mid-build failures during the heavy install phase can't happen.
+    baseImage: kuzey-medsam2-base:cpu
+
+  triggers:
+    myHttpTrigger:
+      maxWorkers: 1
+      kind: http
+      workerAvailabilityTimeoutMilliseconds: 10000
+      attributes:
+        maxRequestBodySize: 33554432  # 32 MiB
+
+  env:
+    - name: KUZEY_HANDLER_KIND
+      value: interactor
+    - name: KUZEY_DEVICE
+      value: cpu
+    - name: KUZEY_MODELS_DIR
+      value: /opt/nuclio/models
+
+  volumes:
+    - volume:
+        name: models
+        hostPath:
+          # __KUZEY_MODELS_HOST__ is replaced by bootstrap.sh with the
+          # absolute host path to ./models before handing the YAML to nuctl.
+          path: __KUZEY_MODELS_HOST__
+      volumeMount:
+        name: models
+        mountPath: /opt/nuclio/models
+        readOnly: true
+
+  platform:
+    attributes:
+      restartPolicy:
+        name: always
+        maximumRetryCount: 3
+      mountMode: volume

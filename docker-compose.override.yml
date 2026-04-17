@@ -1,0 +1,26 @@
+# Kuzey overlay on top of upstream CVAT's docker-compose.yml +
+# components/serverless/docker-compose.serverless.yml.
+#
+# Adds:
+#   - host-port mapping for CVAT UI via $CVAT_HOST_PORT
+#   - mount of ./serverless and ./models into nuclio so nuctl can deploy
+#   - gpu/cpu profiles that toggle NVIDIA device reservation
+services:
+  traefik:
+    # Upstream pins traefik:v2.10 whose vendored Docker client uses API 1.24.
+    # Docker Engine 25+ rejects that with "Minimum supported API version is
+    # 1.40", so traefik can't discover CVAT's routers. Bumping to v2.11 is a
+    # drop-in that ships a modern docker client while keeping v2 label syntax.
+    image: traefik:v2.11
+    # !override fully replaces upstream's ports list. Upstream publishes
+    # 8080:8080 and 8090:8090; we flatten that to a single UI mapping so the
+    # user can pick any free host port without clashing.
+    ports: !override
+      - "${CVAT_HOST_PORT:-8080}:8080"
+
+  nuclio:
+    volumes:
+      - ./serverless:/opt/nuclio/functions:ro
+      - ./models:/opt/nuclio/models:ro
+    environment:
+      KUZEY_DEVICE: "${DEVICE:-cpu}"
