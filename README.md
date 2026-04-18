@@ -20,7 +20,7 @@ Built on [CVAT](https://github.com/cvat-ai/cvat) (MIT) and
    ./start.sh
    ```
 3. Your browser opens at **http://localhost:8080**. Log in with the default
-   credentials printed in the terminal (`clinician` / `clinician`). Change
+   credentials printed in the terminal (`kuzey` / `kuzey`). Change
    them in `.env` before first start if you want something different.
 
 First run takes 5–15 minutes while model weights download (~1 GB) and
