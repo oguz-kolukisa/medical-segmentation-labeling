@@ -52,11 +52,28 @@ render_function_yaml() {
   echo "$out"
 }
 
+ensure_base_image() {
+  # The nuclio function's baseImage (kuzey-medsam2-base:$DEVICE) is built
+  # locally per host — we never push it to a registry, so a fresh checkout
+  # has to build it once. Skip if the image is already cached.
+  local kind="$DEVICE"
+  local image="kuzey-medsam2-base:${kind}"
+  local dockerfile="$ROOT/serverless/medsam2/docker/Dockerfile.${kind}"
+  if docker image inspect "$image" >/dev/null 2>&1; then
+    echo "[kuzey] Base image $image already built, skipping."
+    return
+  fi
+  [[ -f "$dockerfile" ]] || { echo "No Dockerfile for $kind at $dockerfile" >&2; exit 1; }
+  echo "[kuzey] Building $image from $(basename "$dockerfile") — first run takes 5–15 min."
+  docker build --progress=plain -t "$image" -f "$dockerfile" "$(dirname "$dockerfile")"
+}
+
 deploy_function() {
   local kind="$DEVICE"                         # cuda or cpu
   local fn_dir="$ROOT/serverless/medsam2/nuclio"
   local yaml="$fn_dir/function-${kind}.yaml"
   [[ -f "$yaml" ]] || { echo "No Nuclio spec for DEVICE=$kind" >&2; exit 1; }
+  ensure_base_image
   ensure_nuctl
   ensure_nuclio_project
   local rendered; rendered="$(render_function_yaml "$yaml")"
