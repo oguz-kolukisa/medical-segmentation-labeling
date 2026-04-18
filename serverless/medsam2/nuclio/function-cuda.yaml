@@ -63,10 +63,9 @@ spec:
   platform:
     attributes:
       # Attach the function container to CVAT's docker network so
-      # cvat_server can reach it directly. Without this, CVAT relies on
-      # host.docker.internal routing, which fails on Docker Desktop WSL2
-      # with "Network is unreachable".
-      network: cvat
+      # cvat_server can reach it directly. __KUZEY_CVAT_NETWORK__ is
+      # replaced by bootstrap.sh with the compose-prefixed network name.
+      network: __KUZEY_CVAT_NETWORK__
       restartPolicy:
         name: always
         maximumRetryCount: 3

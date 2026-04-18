@@ -44,11 +44,23 @@ ensure_nuclio_project() {
   "$NUCTL_BIN" create project cvat --platform local
 }
 
+cvat_network_name() {
+  # Compose prefixes the user-declared `cvat` network with the project name
+  # (derived from the dir holding the first -f compose file, so `.cvat` → `cvat`).
+  # Picking the first network matching *_cvat is robust to project-name changes.
+  docker network ls --format '{{.Name}}' | grep -E '(^|_)cvat$' | head -1
+}
+
 render_function_yaml() {
-  # Substitute host-specific paths so the YAML stays portable across checkouts.
+  # Substitute host-specific values so the YAML stays portable across checkouts.
   local src="$1"
   local out; out="$(mktemp -t kuzey-function-XXXXXX.yaml)"
-  sed "s|__KUZEY_MODELS_HOST__|$ROOT/models|g" "$src" > "$out"
+  local network; network="$(cvat_network_name)"
+  [[ -n "$network" ]] || { echo "Could not locate CVAT docker network — is the stack running?" >&2; exit 1; }
+  sed \
+    -e "s|__KUZEY_MODELS_HOST__|$ROOT/models|g" \
+    -e "s|__KUZEY_CVAT_NETWORK__|$network|g" \
+    "$src" > "$out"
   echo "$out"
 }
 
