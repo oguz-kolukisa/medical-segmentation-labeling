@@ -1,0 +1,10 @@
+# Force LF line endings on all text assets that are executed or parsed as code.
+# Without this, a Windows checkout can rewrite .sh shebangs to `#!/usr/bin/env bash\r`,
+# which bash reads as an interpreter named `bash\r` — fails with "no such file".
+*.sh        text eol=lf
+*.py        text eol=lf
+*.yaml      text eol=lf
+*.yml       text eol=lf
+*.json      text eol=lf
+Dockerfile* text eol=lf
+.env.example text eol=lf
