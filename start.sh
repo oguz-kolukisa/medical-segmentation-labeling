@@ -29,6 +29,27 @@ ensure_env_file() {
   log "Wrote .env with DEVICE=$device"
 }
 
+current_cvat_host() {
+  grep -E '^CVAT_HOST=' "$ROOT/.env" | head -n1 | cut -d= -f2- || true
+}
+
+write_cvat_host() {
+  local host="$1"
+  if grep -qE '^CVAT_HOST=' "$ROOT/.env"; then
+    sed -i.bak "s|^CVAT_HOST=.*|CVAT_HOST=$host|" "$ROOT/.env" && rm "$ROOT/.env.bak"
+  else
+    printf 'CVAT_HOST=%s\n' "$host" >> "$ROOT/.env"
+  fi
+}
+
+ensure_cvat_host() {
+  local current; current="$(current_cvat_host)"
+  [[ -n "$current" && "$current" != "auto" ]] && return
+  local host; host="$("$ROOT/scripts/detect_host.sh")"
+  write_cvat_host "$host"
+  log "Resolved CVAT_HOST=$host"
+}
+
 load_env() { set -a; . "$ROOT/.env"; set +a; }
 
 clone_cvat_if_missing() {
@@ -88,17 +109,18 @@ seed_project_once() {
 
 open_ui() {
   (( CI_MODE )) && { log "CI mode — not opening browser."; return; }
-  "$ROOT/scripts/open_browser.sh" "http://localhost:${CVAT_HOST_PORT}"
+  "$ROOT/scripts/open_browser.sh" "http://${CVAT_HOST}:${CVAT_HOST_PORT}"
 }
 
 announce_login() {
-  log "Ready: http://localhost:${CVAT_HOST_PORT}"
+  log "Ready: http://${CVAT_HOST}:${CVAT_HOST_PORT}"
   log "Log in as: ${CVAT_SUPERUSER_USERNAME} / ${CVAT_SUPERUSER_PASSWORD}"
 }
 
 main() {
   require_docker
   ensure_env_file
+  ensure_cvat_host
   load_env
   clone_cvat_if_missing
   download_weights_if_missing
