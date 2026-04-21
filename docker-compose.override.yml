@@ -18,6 +18,20 @@ services:
     ports: !override
       - "${CVAT_HOST_PORT:-8080}:8080"
 
+  # Accept any Host header on the CVAT routers. Upstream pins them to
+  # Host(`${CVAT_HOST}`), which 404s when reached via a Cloudflare Tunnel
+  # (`*.trycloudflare.com`), dynamic DNS, or a reverse proxy rewriting Host.
+  # Compose appends our label list to upstream's; Docker keeps the last
+  # definition of a duplicate key, so these entries win.
+  cvat_server:
+    labels:
+      - traefik.http.routers.cvat.rule=HostRegexp(`{any:.+}`) &&
+        PathPrefix(`/api/`, `/static/`, `/admin`, `/documentation/`, `/django-rq`)
+
+  cvat_ui:
+    labels:
+      - traefik.http.routers.cvat-ui.rule=HostRegexp(`{any:.+}`)
+
   nuclio:
     volumes:
       - ./serverless:/opt/nuclio/functions:ro
