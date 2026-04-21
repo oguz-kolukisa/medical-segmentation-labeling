@@ -12,6 +12,15 @@ services:
     # 1.40", so traefik can't discover CVAT's routers. Bumping to v2.11 is a
     # drop-in that ships a modern docker client while keeping v2 label syntax.
     image: traefik:v2.11
+    environment:
+      # Trust X-Forwarded-* headers on the `web` entrypoint. Without this,
+      # Traefik overwrites cloudflared's `X-Forwarded-Proto: https` with `http`
+      # (because Traefik itself speaks HTTP on :8080), and Django then thinks
+      # the request is plain HTTP. That mismatch with the browser's HTTPS
+      # origin triggers intermittent CSRF failures — most visible on MedSAM2
+      # (AI assist fires many POSTs per interaction). Safe here because :8080
+      # on the host is reached only by cloudflared / the local network.
+      TRAEFIK_ENTRYPOINTS_web_FORWARDEDHEADERS_INSECURE: "true"
     # !override fully replaces upstream's ports list. Upstream publishes
     # 8080:8080 and 8090:8090; we flatten that to a single UI mapping so the
     # user can pick any free host port without clashing.
