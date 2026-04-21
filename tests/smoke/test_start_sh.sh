@@ -13,5 +13,9 @@ trap cleanup EXIT
 ./start.sh --ci
 
 # start.sh already waits for /api/server/about; reassert for belt-and-braces.
-curl -fsS "http://localhost:${CVAT_HOST_PORT:-8080}/api/server/about" | grep -q '"version"'
+# Source .env so we get the resolved CVAT_HOST for Traefik's Host-match router.
+set -a; . "$ROOT/.env"; set +a
+curl -fsS -H "Host: ${CVAT_HOST}" \
+  "http://localhost:${CVAT_HOST_PORT:-8080}/api/server/about" \
+  | grep -q '"version"'
 echo "[smoke] CVAT is up and responding."

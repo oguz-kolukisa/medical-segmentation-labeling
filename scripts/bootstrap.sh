@@ -107,7 +107,7 @@ seed_project() {
   # Admin user 'clinician' is created on CVAT first-run via its own superuser flow;
   # here we just POST the project if it doesn't exist. Auth handled interactively
   # by the expert on first login — safer than baking a password into the repo.
-  if ! curl -fsS "$api/projects?name=kuzey" | grep -q '"name":"kuzey"'; then
+  if ! curl -fsS -H "Host: ${CVAT_HOST}" "$api/projects?name=kuzey" | grep -q '"name":"kuzey"'; then
     echo "[kuzey] Log in to CVAT in your browser once, then rerun ./start.sh"
     echo "[kuzey] to auto-create the default project. (CVAT requires an admin"
     echo "[kuzey] user to exist before API writes are allowed.)"

@@ -93,9 +93,11 @@ deploy_function_once() {
 
 wait_for_cvat() {
   log "Waiting for CVAT to be healthy…"
+  # Hit loopback for reliability, but pass the Host header Traefik's router
+  # expects — otherwise the request falls through to a 404.
   local url="http://localhost:${CVAT_HOST_PORT}/api/server/about"
   for _ in $(seq 1 120); do
-    curl -fsS "$url" >/dev/null 2>&1 && { log "CVAT is up."; return; }
+    curl -fsS -H "Host: ${CVAT_HOST}" "$url" >/dev/null 2>&1 && { log "CVAT is up."; return; }
     sleep 2
   done
   die "CVAT did not become healthy in 4 minutes. Check 'docker compose logs'."
